@@ -1,0 +1,52 @@
+{
+  "rules": {
+    "songs": {
+      ".read": "auth != null",
+      "$songId": {
+        ".write": "auth != null && (!data.exists() || data.child('addedBy').val() === auth.uid)",
+        ".validate": "newData.hasChildren(['name', 'url', 'addedAt', 'addedBy'])"
+      }
+    },
+
+    "rooms": {
+      "$roomCode": {
+        ".read": "auth != null",
+
+        "host": {
+          ".write": "auth != null && ((!data.exists() && newData.val() === auth.uid) || (data.exists() && data.val() === auth.uid) || (data.exists() && newData.val() === auth.uid && !root.child('rooms/' + $roomCode + '/members/' + data.val()).exists()))"
+        },
+
+        "createdAt": {
+          ".write": "auth != null && !data.exists()"
+        },
+
+        "currentSongId": {
+          ".write": "auth != null && root.child('rooms/' + $roomCode + '/host').val() === auth.uid"
+        },
+        "baseTime": {
+          ".write": "auth != null && root.child('rooms/' + $roomCode + '/host').val() === auth.uid"
+        },
+        "isPlaying": {
+          ".write": "auth != null && root.child('rooms/' + $roomCode + '/host').val() === auth.uid"
+        },
+        "updatedAt": {
+          ".write": "auth != null && root.child('rooms/' + $roomCode + '/host').val() === auth.uid"
+        },
+
+        "playlist": {
+          ".write": "auth != null && root.child('rooms/' + $roomCode + '/host').val() === auth.uid",
+          "$songId": {
+            ".validate": "root.child('songs/' + $songId).exists()"
+          }
+        },
+
+        "members": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid",
+            ".validate": "newData.hasChildren(['name', 'joinedAt'])"
+          }
+        }
+      }
+    }
+  }
+}

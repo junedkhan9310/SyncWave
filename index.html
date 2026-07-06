@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SyncWave — Listen together, perfectly in time</title>
+<meta name="description" content="Create a room, share the code, and listen to music in perfect sync with friends.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Background dial texture -->
+<div class="bg-noise" aria-hidden="true"></div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<!-- ============ LANDING VIEW ============ -->
+<main id="view-landing" class="view view-landing">
+  <div class="tuner-frame">
+    <div class="tuner-ticks" aria-hidden="true"></div>
+
+    <header class="wordmark">
+      <span class="wordmark-freq">104.5</span>
+      <h1>Sync<em>Wave</em></h1>
+      <p class="tagline">Tune in together. One host, one waveform, zero lag.</p>
+    </header>
+
+    <div class="landing-actions">
+      <button id="btn-show-create" class="btn btn-primary btn-lg">
+        <span class="btn-dot"></span> Create a room
+      </button>
+      <button id="btn-show-join" class="btn btn-ghost btn-lg">
+        Join a room
+      </button>
+    </div>
+
+    <!-- Create panel -->
+    <div id="panel-create" class="panel hidden">
+      <label for="input-name-create" class="field-label">Your name</label>
+      <input id="input-name-create" class="field-input" type="text" maxlength="18" placeholder="e.g. Nova">
+      <button id="btn-create-confirm" class="btn btn-primary btn-full">Start broadcasting</button>
+      <button class="btn-link btn-back" data-back>← back</button>
+    </div>
+
+    <!-- Join panel -->
+    <div id="panel-join" class="panel hidden">
+      <label for="input-name-join" class="field-label">Your name</label>
+      <input id="input-name-join" class="field-input" type="text" maxlength="18" placeholder="e.g. Nova">
+      <label for="input-code-join" class="field-label">Room frequency</label>
+      <input id="input-code-join" class="field-input field-code" type="text" maxlength="6" placeholder="XXXXXX" autocapitalize="characters">
+      <button id="btn-join-confirm" class="btn btn-primary btn-full">Tune in</button>
+      <button class="btn-link btn-back" data-back>← back</button>
+    </div>
+  </div>
+  <p class="footnote">No accounts. No installs. Just a code.</p>
+</main>
+
+<!-- ============ ROOM VIEW ============ -->
+<div id="view-room" class="view view-room hidden">
+
+  <header class="room-header">
+    <div class="room-header-left">
+      <span class="wordmark-small">Sync<em>Wave</em></span>
+    </div>
+    <div class="room-header-code" id="room-code-display" title="Click to copy room code">
+      <span class="freq-tick">◂</span>
+      <span id="room-code-text">------</span>
+      <span class="freq-tick">▸</span>
+    </div>
+    <div class="room-header-right">
+      <span id="live-pill" class="live-pill">
+        <span class="live-dot"></span><span id="live-pill-text">LIVE</span>
+      </span>
+      <button id="btn-leave" class="btn btn-ghost btn-sm">Leave</button>
+    </div>
+  </header>
+
+  <div class="room-body">
+
+    <!-- Members -->
+    <aside class="panel-card members-panel">
+      <h2 class="panel-title">In the room</h2>
+      <ul id="members-list" class="members-list"></ul>
+    </aside>
+
+    <!-- Now playing -->
+    <section class="panel-card nowplaying-panel">
+      <div class="dial-wrap">
+        <svg id="dial-ring" class="dial-ring" viewBox="0 0 220 220" aria-hidden="true">
+          <circle class="dial-track" cx="110" cy="110" r="98"></circle>
+          <circle id="dial-progress" class="dial-progress" cx="110" cy="110" r="98"></circle>
+        </svg>
+        <div id="disc" class="disc">
+          <div class="disc-label">
+            <span id="disc-note">♫</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="track-meta">
+        <h3 id="track-title" class="track-title">No track queued</h3>
+        <p id="track-sub" class="track-sub">Upload a song to get started</p>
+      </div>
+
+      <div class="progress-row">
+        <span id="time-current" class="time-label">0:00</span>
+        <input id="seek-bar" class="seek-bar" type="range" min="0" max="100" value="0" step="0.1" disabled>
+        <span id="time-total" class="time-label">0:00</span>
+      </div>
+
+      <div class="transport-row">
+        <button id="btn-prev" class="transport-btn" disabled aria-label="Previous">
+          <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zM20 6L9 12l11 6z"/></svg>
+        </button>
+        <button id="btn-playpause" class="transport-btn transport-btn-main" disabled aria-label="Play">
+          <svg id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          <svg id="icon-pause" viewBox="0 0 24 24" class="hidden"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+        </button>
+        <button id="btn-next" class="transport-btn" disabled aria-label="Next">
+          <svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM4 6l11 6-11 6z"/></svg>
+        </button>
+      </div>
+
+      <div class="volume-row">
+        <svg class="vol-icon" viewBox="0 0 24 24"><path d="M3 10v4h4l5 5V5L7 10H3z"/></svg>
+        <input id="volume-bar" class="seek-bar volume-bar" type="range" min="0" max="100" value="80" step="1">
+      </div>
+
+      <p id="host-only-note" class="host-only-note hidden">Only the host can control playback</p>
+    </section>
+
+    <!-- Playlist -->
+    <section class="panel-card playlist-panel">
+      <div class="playlist-header">
+        <h2 class="panel-title">Playlist</h2>
+        <div class="playlist-header-actions">
+          <button id="btn-toggle-library" class="btn btn-ghost btn-sm hidden">Library</button>
+          <div id="upload-wrap" class="upload-wrap hidden">
+            <label for="file-upload" class="btn btn-primary btn-sm">
+              + Upload MP3
+            </label>
+            <input id="file-upload" type="file" accept="audio/mpeg,audio/mp3,.mp3" hidden>
+          </div>
+        </div>
+      </div>
+      <div id="upload-progress-wrap" class="upload-progress-wrap hidden">
+        <div class="upload-progress-track"><div id="upload-progress-bar" class="upload-progress-bar"></div></div>
+        <span id="upload-progress-label" class="upload-progress-label">Uploading… 0%</span>
+      </div>
+
+      <div id="library-panel" class="library-panel hidden">
+        <div class="library-panel-header">
+          <span class="library-panel-title">Song library <span class="library-panel-hint">— shared across every room</span></span>
+          <button id="btn-close-library" class="btn-link" aria-label="Close library">✕</button>
+        </div>
+        <ul id="library-list" class="library-list"></ul>
+        <p id="library-empty" class="playlist-empty hidden">No songs in the library yet. Upload one to get started.</p>
+      </div>
+
+      <ul id="playlist-list" class="playlist-list"></ul>
+      <p id="playlist-empty" class="playlist-empty">Nothing queued yet.</p>
+    </section>
+
+  </div>
+</div>
+
+<audio id="player" preload="metadata"></audio>
+
+<!-- Firebase compat SDKs (no bundler needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
