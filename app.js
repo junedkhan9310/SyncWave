@@ -72,6 +72,9 @@
   const uploadProgressLabel = $("upload-progress-label");
   const playlistList = $("playlist-list");
   const playlistEmpty = $("playlist-empty");
+  const chatList = $("chat-list");
+  const chatInput = $("chat-input");
+  const btnSendChat = $("btn-send-chat");
 
   const btnToggleLibrary = $("btn-toggle-library");
   const btnCloseLibrary = $("btn-close-library");
@@ -253,6 +256,7 @@
         isPlaying: false,
         updatedAt: firebase.database.ServerValue.TIMESTAMP,
         playlist: {},
+        messages: {},
         members: {
           [uid]: {
             name: myName,
@@ -389,6 +393,7 @@
     renderMembers(data.members || {});
     renderPlaylistAndTrack(data, latestSongsData);
     renderLibrary();
+    renderMessages(data.messages || {});
     syncPlayback(data, latestSongsData);
   }
 
@@ -437,6 +442,44 @@
       `;
       membersList.appendChild(li);
     });
+  }
+
+  function renderMessages(messages) {
+    chatList.innerHTML = "";
+    const entries = Object.entries(messages || {}).sort((a, b) => (a[1].createdAt || 0) - (b[1].createdAt || 0));
+
+    if (entries.length === 0) {
+      const empty = document.createElement("li");
+      empty.className = "playlist-empty chat-empty";
+      empty.textContent = "No messages yet. Start the conversation.";
+      chatList.appendChild(empty);
+      return;
+    }
+
+    entries.forEach(([messageId, message]) => {
+      const li = document.createElement("li");
+      li.className = "chat-message" + (message.uid === uid ? " is-me" : "");
+      const name = escapeHtml(message.name || "Listener");
+      const text = escapeHtml(message.text || "");
+      const stamp = formatChatTimestamp(message.createdAt);
+      li.innerHTML = `
+        <div class="chat-message-head">
+          <span class="chat-name">${name}</span>
+          <span class="chat-time">${stamp}</span>
+        </div>
+        <div class="chat-text">${text}</div>
+      `;
+      chatList.appendChild(li);
+    });
+
+    chatList.scrollTop = chatList.scrollHeight;
+  }
+
+  function formatChatTimestamp(value) {
+    if (!value) return "just now";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "just now";
+    return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   }
 
   // Rooms only store references (playlist/<songId>: { addedAt }); the actual
@@ -765,6 +808,32 @@
     }
     roomRef.update(updates);
   }
+
+  function sendChatMessage() {
+    if (!currentRoomCode || !roomRef || !uid) return;
+    const text = chatInput.value.trim();
+    if (!text) return;
+
+    db.ref(`rooms/${currentRoomCode}/messages`).push({
+      uid,
+      name: myName || "Listener",
+      text,
+      createdAt: firebase.database.ServerValue.TIMESTAMP
+    }).then(() => {
+      chatInput.value = "";
+    }).catch((err) => {
+      console.error(err);
+      showToast("Couldn't send your message", "error");
+    });
+  }
+
+  btnSendChat.addEventListener("click", sendChatMessage);
+  chatInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendChatMessage();
+    }
+  });
 
   // Seek bar: only host can drag it.
   seekBar.addEventListener("pointerdown", () => { seekBarIsDragging = true; });
